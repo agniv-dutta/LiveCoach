@@ -98,6 +98,14 @@ export default function ResultsPage() {
           gap: 'var(--space-lg)',
         }}
       >
+        <a
+          href="/"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-xs)', color: 'var(--slate)', fontSize: 14, marginBottom: 'var(--space-xs)' }}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 16 }}>arrow_back</span>
+          Back home
+        </a>
+
         <div
           style={{
             display: 'flex',
@@ -124,13 +132,17 @@ export default function ResultsPage() {
 
           <div className="card" style={{ padding: 'var(--space-sm) var(--space-md)', display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
             <span className="material-symbols-rounded" style={{ fontSize: 18, color: 'var(--blue)' }}>check_circle</span>
-            <span className="caption" style={{ fontWeight: 500 }}>{session.role}</span>
+            <span className="caption" style={{ fontWeight: 500, textTransform: 'capitalize' }}>{session.role}</span>
           </div>
         </div>
 
-        <FeedbackCard feedback={session.feedback} />
+        <FeedbackCard
+          feedback={session.feedback}
+          scores={session.scores}
+          sessionId={session.id}
+        />
 
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             className="btn btn-primary"
             onClick={() => router.push('/')}
@@ -138,6 +150,10 @@ export default function ResultsPage() {
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>refresh</span>
             Try another round
           </button>
+          <a href="/history" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
+            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>history</span>
+            View history
+          </a>
         </div>
       </div>
     </section>

@@ -1,19 +1,39 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import DecisionBar from '@/components/DecisionBar';
 import { startSession } from '@/lib/db';
 
 export default function Home() {
   const router = useRouter();
+  const [recentSessions, setRecentSessions] = useState<{ id: string; role: string }[]>([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('coach_recent_sessions');
+    if (stored) {
+      try {
+        setRecentSessions(JSON.parse(stored));
+      } catch {}
+    }
+  }, []);
 
   const handleStart = async (value: string) => {
-    const role = value.toLowerCase().includes('pitch') ? 'pitch' : 'interview';
+    const lower = value.toLowerCase();
+    let role = 'interview';
+    if (lower.includes('pitch')) role = 'pitch';
+    else if (lower.includes('exec')) role = 'executive';
+    else if (lower.includes('behav') || lower.includes('star')) role = 'behavioral';
+
     try {
       const { session_id } = await startSession(role);
+      const entry = { id: session_id, role };
+      const updated = [entry, ...recentSessions.filter((s) => s.id !== session_id)].slice(0, 5);
+      localStorage.setItem('coach_recent_sessions', JSON.stringify(updated));
       router.push(`/rehearsal/${session_id}`);
-    } catch {
-      alert('Could not start session. Make sure the backend is running.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Could not start session.';
+      alert(msg);
     }
   };
 
@@ -87,7 +107,7 @@ export default function Home() {
           </p>
 
           <DecisionBar
-            placeholder="Type interview or pitch..."
+            placeholder="Type interview, pitch, executive, or behavioral..."
             onAction={handleStart}
           />
 
@@ -104,7 +124,14 @@ export default function Home() {
           padding: 'var(--space-2xl) var(--space-lg)',
         }}
       >
-        <h2 style={{ textAlign: 'center' }}>How it works</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--space-xl)' }}>
+          <h2 style={{ textAlign: 'center' }}>How it works</h2>
+          <a href="/history" className="btn btn-ghost" style={{ textDecoration: 'none', fontSize: 14 }}>
+            <span className="material-symbols-rounded" style={{ fontSize: 16 }}>history</span>
+            View history
+          </a>
+        </div>
+
         <div
           style={{
             display: 'grid',
@@ -139,10 +166,29 @@ export default function Home() {
             </div>
             <h3 style={{ marginTop: 'var(--space-md)' }}>Get structured feedback</h3>
             <p style={{ marginTop: 'var(--space-sm)', color: 'var(--slate)' }}>
-              Strengths, gaps, and one key improvement to work on before the real thing.
+              Strengths, gaps, one key improvement, and performance scores.
             </p>
           </div>
         </div>
+
+        {recentSessions.length > 0 && (
+          <div style={{ marginTop: 'var(--space-2xl)' }}>
+            <h3 style={{ marginBottom: 'var(--space-md)' }}>Recent sessions</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+              {recentSessions.map((s) => (
+                <a
+                  key={s.id}
+                  href={`/results/${s.id}`}
+                  className="card"
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'var(--space-md) var(--space-lg)', textDecoration: 'none' }}
+                >
+                  <span style={{ textTransform: 'capitalize', fontWeight: 500 }}>{s.role} rehearsal</span>
+                  <span className="material-symbols-rounded" style={{ color: 'var(--slate)', fontSize: 18 }}>arrow_forward</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </section>
     </>
   );

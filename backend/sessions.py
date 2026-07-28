@@ -1,12 +1,13 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 import uuid
-from lib.database import create_session, save_session_data, get_session
+from io import BytesIO
+from lib.database import create_session, save_session_data, get_session, get_user_sessions, check_daily_quota
 from lib.gemini_client import stream_coaching_session
 
 app = FastAPI()
 
-# Allow CORS for localhost + Vercel deployment
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "https://*.vercel.app"],
@@ -16,60 +17,112 @@ app.add_middleware(
 )
 
 @app.post("/api/sessions/start")
-async def start_session(role: str = "interview"):
-    """
-    Start a new rehearsal session.
-    role: 'interview' or 'pitch'
-    """
+async def start_session(role: str = "interview", user_id: str = "anonymous"):
     session_id = str(uuid.uuid4())[:8]
-    create_session(session_id, role)
+    if not check_daily_quota(user_id):
+        raise HTTPException(status_code=429, detail="Daily session limit reached")
+    create_session(session_id, role, user_id)
     return {
         'session_id': session_id,
         'role': role,
+        'user_id': user_id,
         'message': 'Session started. Start recording.'
     }
 
 @app.post("/api/sessions/{session_id}/upload")
 async def upload_audio(session_id: str, file: UploadFile = File(...)):
-    """
-    Upload audio file, process with Gemini Live, save feedback.
-    """
     try:
-        # Save uploaded audio temp file
         temp_path = f"/tmp/{session_id}_audio.wav"
         contents = await file.read()
         with open(temp_path, 'wb') as f:
             f.write(contents)
-        
-        # Process with Gemini
-        result = await stream_coaching_session(temp_path)
-        
+
+        session = get_session(session_id)
+        role = session['role'] if session else 'interview'
+
+        result = await stream_coaching_session(temp_path, role)
+
         if result['status'] == 'error':
             raise HTTPException(status_code=500, detail=result['error'])
-        
-        # Save to DB
+
         save_session_data(
             session_id,
             result['transcript'],
             result['feedback'],
-            duration=0  # Derive from audio file later
+            result.get('scores', {}),
+            duration=0
         )
-        
+
         return {
             'session_id': session_id,
             'transcript': result['transcript'],
-            'feedback': result['feedback']
+            'feedback': result['feedback'],
+            'scores': result.get('scores', {})
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/sessions/{session_id}")
 async def get_session_data(session_id: str):
-    """Retrieve a completed session."""
     session = get_session(session_id)
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     return session
+
+@app.get("/api/sessions/user/{user_id}/history")
+async def get_user_history(user_id: str, limit: int = Query(10, le=50)):
+    sessions = get_user_sessions(user_id, limit)
+    return {'sessions': sessions, 'user_id': user_id}
+
+@app.get("/api/sessions/{session_id}/export")
+async def export_session(session_id: str, format: str = Query('markdown', regex='^(markdown|pdf)$')):
+    session = get_session(session_id)
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    if format == 'markdown':
+        md = f"""# Interview Rehearsal Report
+
+**Role**: {session['role']}
+**Date**: {session['created_at']}
+**Status**: {session['status']}
+
+## Transcript
+
+{session['transcript'] or '*No transcript recorded*'}
+
+## Coach Feedback
+
+{session['feedback'] or '*No feedback available*'}
+
+## Scores
+
+{session['scores'] if session.get('scores') else '*Not scored*'}
+"""
+        return {'content': md, 'filename': f'rehearsal-{session_id}.md'}
+
+    elif format == 'pdf':
+        md_content = f"""Interview Rehearsal Report
+Role: {session['role']}
+Date: {session['created_at']}
+
+TRANSCRIPT
+{session['transcript'] or 'No transcript recorded'}
+
+COACH FEEDBACK
+{session['feedback'] or 'No feedback available'}
+
+SCORES
+{session['scores'] if session.get('scores') else 'Not scored'}
+"""
+        buffer = BytesIO()
+        buffer.write(md_content.encode('utf-8'))
+        buffer.seek(0)
+        return StreamingResponse(
+            buffer,
+            media_type="text/markdown",
+            headers={"Content-Disposition": f"attachment; filename=rehearsal-{session_id}.md"}
+        )
 
 if __name__ == '__main__':
     import uvicorn

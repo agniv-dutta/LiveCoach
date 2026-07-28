@@ -31,7 +31,7 @@ export default function RehearsalPage() {
       style={{
         position: 'relative',
         overflow: 'hidden',
-        padding: 'var(--space-2xl) var(--space-lg)',
+        padding: 'var(--space-2xl) var(--space-md)',
         minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
@@ -47,6 +47,14 @@ export default function RehearsalPage() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 1, maxWidth: 680, width: '100%' }}>
+        <a
+          href="/"
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-xs)', marginBottom: 'var(--space-md)', color: 'var(--slate)', fontSize: 14 }}
+        >
+          <span className="material-symbols-rounded" style={{ fontSize: 16 }}>arrow_back</span>
+          Back home
+        </a>
+
         <span
           className="caption"
           style={{
@@ -73,7 +81,7 @@ export default function RehearsalPage() {
             flexDirection: 'column',
             alignItems: 'center',
             gap: 'var(--space-lg)',
-            padding: 'var(--space-xl)',
+            padding: 'var(--space-xl) var(--space-md)',
           }}
         >
           <AudioRecorder
@@ -92,9 +100,19 @@ export default function RehearsalPage() {
                   justifyContent: 'center',
                 }}
               >
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--blue)', opacity: 0.4, animation: 'pulse 1.2s infinite' }} />
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--blue)', opacity: 0.4, animation: 'pulse 1.2s infinite 0.2s' }} />
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--blue)', opacity: 0.4, animation: 'pulse 1.2s infinite 0.4s' }} />
+                {[0, 1, 2].map((i) => (
+                  <span
+                    key={i}
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      background: 'var(--blue)',
+                      opacity: 0.4,
+                      animation: `pulse 1.2s infinite ${i * 0.2}s`,
+                    }}
+                  />
+                ))}
               </div>
             </div>
           )}
