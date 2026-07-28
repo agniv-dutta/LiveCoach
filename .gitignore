@@ -1,0 +1,35 @@
+# ─── Environment ───
+.env
+.env.local
+.env*.local
+
+# ─── Python ───
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.so
+
+# ─── Node ───
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
+# ─── OS ───
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ─── IDE ───
+.idea/
+.vscode/
+*.sublime-*
+
+# ─── Project ───
+backend/sessions.db
+*.log
