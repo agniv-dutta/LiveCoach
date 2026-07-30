@@ -2,11 +2,13 @@ import os
 import asyncio
 import json
 import re
-from google.generativeai import GenerativeModel
+import google.generativeai as genai
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=False)
 API_KEY = os.getenv('GEMINI_API_KEY')
+if API_KEY:
+    genai.configure(api_key=API_KEY)
 
 BASE_COACH_PROMPT = """You are an expert interview and pitch coach. Your role is to:
 
@@ -84,7 +86,7 @@ def parse_scores(text: str) -> dict:
 
 async def stream_coaching_session(audio_input_path: str, role: str = 'interview') -> dict:
     try:
-        model = GenerativeModel("gemini-2.0-flash-exp")
+        model = genai.GenerativeModel("gemini-2.5-flash")
 
         prompt = ROLE_SYSTEM_PROMPTS.get(role, ROLE_SYSTEM_PROMPTS['interview'])
         prompt += '\n\n' + SCORING_PROMPT
@@ -102,16 +104,10 @@ async def stream_coaching_session(audio_input_path: str, role: str = 'interview'
 
         full_text = response.text
 
-        # Split feedback and scores
-        feedback_text = full_text
         scores = parse_scores(full_text)
-        # Remove score lines from feedback display
-        score_lines = []
         clean_lines = []
         for line in full_text.split('\n'):
-            if re.match(r'(Clarity|Structure|Impact|Confidence)\s*:', line, re.IGNORECASE):
-                score_lines.append(line)
-            else:
+            if not re.match(r'(Clarity|Structure|Impact|Confidence)\s*:', line, re.IGNORECASE):
                 clean_lines.append(line)
         feedback_text = '\n'.join(clean_lines).strip()
 

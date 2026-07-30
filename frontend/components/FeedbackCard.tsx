@@ -1,5 +1,5 @@
+import { useState } from 'react';
 import type { FeedbackData } from '@/lib/types';
-import { exportSession } from '@/lib/db';
 
 interface FeedbackCardProps {
   feedback: string | null;
@@ -41,33 +41,78 @@ function parseFeedback(raw: string): FeedbackData {
   return { strengths, gaps, improvement, raw };
 }
 
+function TranscriptSection({ raw }: { raw: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const lines = raw.split('\n').filter(Boolean);
+
+  return (
+    <div style={{ marginTop: 'var(--space-md)' }}>
+      <button
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 'var(--space-sm)',
+          border: 'none', background: 'none', cursor: 'pointer', padding: 0,
+          font: 'var(--text-caption)', fontWeight: 700, color: 'var(--slate)',
+          textTransform: 'uppercase', letterSpacing: '0.06em',
+        }}
+      >
+        <span>Transcript</span>
+        <svg
+          style={{
+            width: 14, height: 14,
+            transition: 'transform 0.3s var(--ease)',
+            transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+          viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {expanded && (
+        <div style={{ marginTop: 'var(--space-sm)', display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)' }}>
+          {lines.map((line, i) => {
+            const isCoach = /coach|interruption|question|clarify/i.test(line) && line.length < 100;
+            return (
+              <div
+                key={i}
+                style={{
+                  padding: 'var(--space-sm) var(--space-md)',
+                  borderRadius: 'var(--radius-sm)',
+                  borderLeft: `4px solid ${isCoach ? 'var(--blue)' : 'var(--line)'}`,
+                  background: isCoach ? 'var(--blue-soft)' : 'var(--bg-alt)',
+                }}
+              >
+                {isCoach && (
+                  <p style={{ font: 'var(--text-caption)', fontWeight: 700, color: 'var(--blue)', marginBottom: 2 }}>Coach</p>
+                )}
+                <p style={{ font: 'var(--text-caption)', color: 'var(--slate)', whiteSpace: 'pre-wrap' }}>{line}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const SCORE_INTERPRETATIONS: Record<string, (v: number) => string> = {
+  clarity: (v) => v >= 8 ? 'Clear pacing, easy to follow' : v >= 5 ? 'Adequate, but could be more focused' : 'Needs work on articulation',
+  structure: (v) => v >= 8 ? 'Strong narrative arc' : v >= 5 ? 'Some structure, but meanders' : 'Lacks clear beginning, middle, end',
+  impact: (v) => v >= 8 ? 'Demonstrated real business value' : v >= 5 ? 'Mentioned results but not quantified' : 'Needs specific examples of impact',
+  confidence: (v) => v >= 8 ? 'Clear voice, good pacing' : v >= 5 ? 'Occasional hesitation' : 'Sounds unsure, needs practice',
+};
+
 export default function FeedbackCard({ feedback, scores, sessionId }: FeedbackCardProps) {
   if (!feedback) return null;
 
   const data = parseFeedback(feedback);
-
-  const handleExport = async () => {
-    if (!sessionId) return;
-    try {
-      const result = await exportSession(sessionId, 'markdown');
-      const blob = new Blob([result.content], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = result.filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert('Export failed.');
-    }
-  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {scores && Object.keys(scores).length > 0 && (
         <div className="card">
           <h3 style={{ marginBottom: 'var(--space-md)' }}>Performance scores</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 'var(--space-md)' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 'var(--space-md)' }}>
             {Object.entries(scores).map(([key, val]) => (
               <div key={key}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 'var(--space-xs)' }}>
@@ -77,6 +122,9 @@ export default function FeedbackCard({ feedback, scores, sessionId }: FeedbackCa
                 <div style={{ background: 'var(--line)', borderRadius: 999, height: 6, overflow: 'hidden' }}>
                   <div style={{ width: `${(val / 10) * 100}%`, background: 'var(--blue)', height: '100%', borderRadius: 999, transition: 'width 0.6s var(--ease)' }} />
                 </div>
+                <p style={{ marginTop: 'var(--space-xs)', font: 'var(--text-caption)', color: 'var(--slate)' }}>
+                  {(SCORE_INTERPRETATIONS[key] || (() => ''))(val)}
+                </p>
               </div>
             ))}
           </div>
@@ -121,22 +169,9 @@ export default function FeedbackCard({ feedback, scores, sessionId }: FeedbackCa
           </div>
         )}
 
-        <details style={{ marginTop: 'var(--space-md)' }}>
-          <summary className="caption" style={{ cursor: 'pointer' }}>Raw transcript</summary>
-          <p style={{ marginTop: 'var(--space-sm)', whiteSpace: 'pre-wrap', font: 'var(--text-caption)', color: 'var(--slate)' }}>
-            {data.raw}
-          </p>
-        </details>
+        <TranscriptSection raw={data.raw} />
       </div>
 
-      {sessionId && (
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center' }}>
-          <button className="btn btn-secondary" onClick={handleExport}>
-            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>download</span>
-            Export as Markdown
-          </button>
-        </div>
-      )}
     </div>
   );
 }

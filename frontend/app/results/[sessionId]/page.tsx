@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import FeedbackCard from '@/components/FeedbackCard';
-import { getSession } from '@/lib/db';
+import { getSession, exportSession } from '@/lib/db';
 import type { Session } from '@/lib/types';
 
 export default function ResultsPage() {
@@ -11,6 +11,21 @@ export default function ResultsPage() {
   const router = useRouter();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const handleExport = async () => {
+    try {
+      const result = await exportSession(sessionId, 'markdown');
+      const blob = new Blob([result.content], { type: 'text/markdown' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = result.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Export failed.');
+    }
+  };
 
   useEffect(() => {
     getSession(sessionId)
@@ -142,18 +157,25 @@ export default function ResultsPage() {
           sessionId={session.id}
         />
 
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-sm)', width: '100%', maxWidth: 400, margin: '0 auto' }}>
           <button
             className="btn btn-primary"
+            style={{ width: '100%', justifyContent: 'center', padding: '14px 24px', fontSize: 16 }}
             onClick={() => router.push('/')}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>refresh</span>
             Try another round
           </button>
-          <a href="/history" className="btn btn-secondary" style={{ textDecoration: 'none' }}>
-            <span className="material-symbols-rounded" style={{ fontSize: 18 }}>history</span>
-            View history
-          </a>
+          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <button className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleExport}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18 }}>download</span>
+              Export
+            </button>
+            <a href="/history" className="btn btn-secondary" style={{ flex: 1, justifyContent: 'center', textDecoration: 'none' }}>
+              <span className="material-symbols-rounded" style={{ fontSize: 18 }}>history</span>
+              History
+            </a>
+          </div>
         </div>
       </div>
     </section>

@@ -16,14 +16,14 @@ Built with Gemini Live API for natural dialogue and NSOffice glass UI for a prem
 - **Session History**: Save transcripts and feedback to revisit later
 - **Role-Specific Coaching**: Interview, pitch, executive, behavioral — tailored prompts
 - **NSOffice Glass UI**: Liquid-glass morphism design with Electric Blue accents and DM Sans typography
-- **Free Tier**: Zero credit card required; runs on Google AI Studio free tier (Gemini 2.0 Flash)
+- **Free Tier**: Zero credit card required; runs on Google AI Studio free tier (Gemini 2.5 Flash)
 
 ## Tech Stack
 
 - **Frontend**: Next.js 14 (App Router) + TypeScript + NSOffice Glass UI (tokens.css)
 - **Backend**: Python FastAPI (Vercel serverless)
 - **Database**: SQLite (local, easy to deploy)
-- **AI**: Google Gemini Live API (`gemini-2.0-flash-exp`)
+- **AI**: Google Gemini API (`gemini-2.5-flash`)
 - **Deploy**: Vercel (frontend) + Vercel serverless (backend)
 - **Design**: NSOffice glass UI kit (included)
 
@@ -74,6 +74,7 @@ npm run dev                       # Opens http://localhost:3000
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/api/sessions/health` | Health check for Render |
 | POST | `/api/sessions/start?role=interview&user_id=abc` | Create a new session |
 | POST | `/api/sessions/{id}/upload` | Upload audio, get feedback + scores |
 | GET | `/api/sessions/{id}` | Retrieve session data |
@@ -125,7 +126,7 @@ Browser (Web Audio API)
 Python FastAPI Backend
   │
   ├── SQLite (sessions.db)
-  └── Gemini Live API (gemini-2.0-flash-exp)
+  └── Gemini API (gemini-2.5-flash)
         │
         └── Returns: transcript + structured feedback + scores
 ```
@@ -173,7 +174,9 @@ See `frontend/public/tokens.css` and `frontend/public/liquid-glass.js` for imple
 - `DATABASE_URL`: For future PostgreSQL migration (currently SQLite only)
 - `LOG_LEVEL`: `debug` | `info` | `error` (default: `info`)
 
-## Deployment (Vercel)
+## Deployment
+
+### Frontend (Vercel)
 
 ```bash
 npm install -g vercel
@@ -182,9 +185,26 @@ vercel link
 vercel deploy --prod
 ```
 
-Add environment variables in Vercel dashboard:
-- `GEMINI_API_KEY` = your API key
-- `NEXT_PUBLIC_API_URL` = https://[your-deployment].vercel.app
+Set environment variable in **Vercel dashboard** → Project → Settings → Environment Variables:
+- `NEXT_PUBLIC_API_URL` = `https://livecoach-api.onrender.com` (your Render backend URL)
+
+### Backend (Render)
+
+1. Push repo to GitHub
+2. Go to [dashboard.render.com](https://dashboard.render.com) → **New +** → **Blueprint**
+3. Connect your repo — `render.yaml` will be auto-detected
+4. Set `GEMINI_API_KEY` as a **Secret File** in Render dashboard (Settings → Environment)
+5. Deploy
+
+The `render.yaml` at repo root configures everything:
+- **Build**: `pip install -r backend/requirements.txt`
+- **Start**: `cd backend && gunicorn sessions:app --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT`
+- **Health check**: `/api/sessions/health`
+
+Once deployed, Render gives you a URL like `https://livecoach-api.onrender.com`.
+Set this as `NEXT_PUBLIC_API_URL` in Vercel.
+
+> **Note**: Render free tier spins down after 15 min idle. First request after idle takes ~30s to cold start.
 
 ## Troubleshooting
 
