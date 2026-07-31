@@ -33,3 +33,6 @@ Thumbs.db
 # ─── Project ───
 backend/sessions.db
 *.log
+
+# ─── NSOffice Glass UI kit (proprietary, kept locally only) ───
+nsoffice-glass-ui-kit/

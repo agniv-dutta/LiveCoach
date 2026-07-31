@@ -1,4 +1,4 @@
-# Interview Coach – AI-Powered Real-Time Interview Rehearsal
+# LiveCoach – AI-Powered Real-Time Interview Rehearsal
 
 Rehearse job interviews and pitches with an AI coach who interrupts, challenges, and gives actionable feedback.
 Built with Gemini Live API for natural dialogue and NSOffice glass UI for a premium experience.

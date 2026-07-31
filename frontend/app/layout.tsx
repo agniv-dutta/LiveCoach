@@ -3,7 +3,7 @@ import Script from 'next/script';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Interview Coach - Rehearse with AI',
+  title: 'LiveCoach - Rehearse with AI',
   description: 'Real-time AI coaching for interviews and pitches',
 };
 

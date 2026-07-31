@@ -85,7 +85,7 @@ export default function Home() {
             }}
           >
             <span className="material-symbols-rounded" style={{ fontSize: 18 }}>record_voice_over</span>
-            Interview Coach
+            LiveCoach
           </span>
 
           <h1 className="fade-up" style={{ animationDelay: '0ms' }}>
